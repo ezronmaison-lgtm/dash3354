@@ -1,0 +1,146 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trading Dashboard</title>
+<style>
+body{margin:0;background:#111;color:#eee;font-family:Arial,sans-serif;font-size:14px}
+header{padding:12px;background:#1b1b1b;border-bottom:1px solid #333}
+h1{font-size:20px;margin:0 0 4px}
+.sub{color:#aaa;font-size:12px}
+.wrap{padding:8px}
+.stock{border:1px solid #444;border-radius:8px;margin:8px 0;overflow:hidden;background:#151515}
+.stock-toggle{width:100%;border:0;background:#202020;color:#fff;text-align:left;padding:14px;font-size:16px;font-weight:bold}
+.stock-body{display:none;padding:8px}
+.row{display:flex;gap:8px;align-items:flex-start}
+.left{width:42%}.right{width:58%}
+.box{border:1px solid #444;border-radius:6px;padding:8px;margin-bottom:7px;background:#181818}
+.label{font-size:11px;color:#aaa}.value{font-size:18px;margin-top:3px}
+.tv{background:#181818;border:1px solid #333;border-radius:6px;overflow:hidden;margin-bottom:8px}
+.tv iframe{width:100%;border:0;display:block}
+.pos input,.pos select{box-sizing:border-box;width:100%;padding:9px;margin:4px 0;background:#222;color:#fff;border:1px solid #555;border-radius:4px;font-size:14px}
+.pos button{padding:9px 12px;background:#333;color:#fff;border:1px solid #666;border-radius:4px}
+.small{font-size:11px;color:#999;line-height:1.4}
+.summary{padding:10px;border:1px solid #444;border-radius:6px;text-align:center;margin-bottom:8px}
+@media(max-width:600px){.row{display:block}.left,.right{width:100%}}
+</style>
+
+<style>
+.indicator-panel{margin:8px 0;position:relative;z-index:5}
+.indicator-panel button{background:#151d29;color:#fff;border:1px solid #334154;border-radius:6px;padding:7px 10px;font-weight:700}
+.indicator-menu{background:#101721;border:1px solid #334154;border-radius:6px;padding:8px;margin-top:4px;max-width:180px}
+.indicator-menu label{display:block;padding:6px 2px;color:#dce3eb;font-size:12px}
+.indicator-menu input{margin-right:7px}
+</style>
+</head>
+<body>
+<div id="gate" style="position:fixed;z-index:99;inset:0;background:#111;color:#fff;text-align:center;padding-top:100px">
+<h2>Trading Dashboard</h2>
+<input id="pw" type="password" style="padding:12px;font-size:18px" placeholder="Password">
+<br><button onclick="unlock()" style="margin-top:10px;padding:10px 25px">Enter</button>
+<div id="bad" style="color:#f66;margin-top:10px"></div>
+</div>
+
+<header>
+<h1>TRADING DASHBOARD</h1>
+<div class="sub">Trading 212 reference dashboard • designed for old iPad Safari</div>
+</header>
+<div class="wrap" id="app"></div>
+
+<script>
+var PASSWORD='70631';
+function unlock(){
+  if(document.getElementById('pw').value===PASSWORD){
+    document.getElementById('gate').style.display='none';
+  }else{
+    document.getElementById('bad').innerHTML='Wrong password';
+  }
+}
+document.getElementById('pw').onkeydown=function(e){
+  e=e||window.event;
+  if(e.keyCode===13){unlock();}
+};
+
+var markets=[
+ {id:'nq',name:'TECH100 / NASDAQ 100',symbol:'OANDA:NAS100USD'},
+ {id:'oil',name:'CRUDE OIL / WTI',symbol:'TVC:USOIL'},
+ {id:'gold',name:'GOLD / XAUUSD',symbol:'OANDA:XAUUSD'},
+ {id:'silver',name:'SILVER / XAGUSD',symbol:'OANDA:XAGUSD'}
+];
+
+function tvQuote(symbol){
+  var opt=encodeURIComponent('{"symbol":"'+symbol+'","width":"100%","colorTheme":"dark","isTransparent":false,"locale":"en"}');
+  return '<iframe height="126" scrolling="no" allowtransparency="true" frameborder="0" src="https://s.tradingview.com/embed-widget/single-quote/?locale=en#'+opt+'"></iframe>';
+}
+function tvChart(symbol){
+  var opt=encodeURIComponent('{"autosize":true,"symbol":"'+symbol+'","interval":"30","timezone":"Etc/UTC","theme":"dark","style":"1","locale":"en","enable_publishing":false,"hide_top_toolbar":true,"hide_legend":false,"save_image":false,"allow_symbol_change":false,"studies":["Auto Fib Retracement","Auto Fib Extension"]}'); 
+  return '<iframe height="360" scrolling="no" allowtransparency="true" frameborder="0" src="https://s.tradingview.com/embed-widget/advanced-chart/?locale=en#'+opt+'"></iframe>';
+}
+function makeMarket(m){
+  var s='';
+  s+='<section class="stock">';
+  s+='<button class="stock-toggle" onclick="toggleStock(\''+m.id+'\')" type="button">'+m.name+' <span id="arr-'+m.id+'">▸</span></button>';
+  s+='<div class="stock-body" id="body-'+m.id+'">';
+  s+='<div class="row">';
+  s+='<div class="left">';
+  s+='<div class="box"><div class="label">CURRENT — TradingView quote</div><div class="tv">'+tvQuote(m.symbol)+'</div></div>';
+  s+='<div class="box"><div class="label">RESISTANCE</div><div class="value">Use the recent chart high</div></div>';
+  s+='<div class="box"><div class="label">HOLD / SUPPORT</div><div class="value">Use the recent chart low</div></div>';
+  s+='<div class="box"><div class="label">FIB GUIDE</div><div class="small">DOWNTREND: 1.000 → 0.618 → 0.500 → 0.000 → -1.000</div><div class="small" style="margin-top:5px">UPTREND: -1.000 → 0.000 → 0.500 → 0.618 → 1.000</div><div class="small" style="margin-top:5px">Auto-Fib is enabled on the TradingView chart.</div></div>';
+  s+='<div class="small">TradingView widgets provide the live quote and chart. The page does not use WebSocket or price-feed settings.</div>';
+  s+='</div>';
+  s+='<div class="right">';
+  s+='<div class="summary" id="sum-'+m.id+'">No position entered</div>';
+  s+='<div class="box pos"><b>MY POSITION ▾</b>';
+  s+='<select id="side-'+m.id+'"><option value="BUY">BUY</option><option value="SELL">SELL</option></select>';
+  s+='<input id="open-'+m.id+'" type="text" placeholder="Open price">';
+  s+='<input id="qty-'+m.id+'" type="text" placeholder="Shares / Units">';
+  s+='<input id="cur-'+m.id+'" type="text" placeholder="Current price (from quote)">';
+  s+='<button onclick="calc(\''+m.id+'\')" type="button">Calculate P/L</button>';
+  s+='</div></div></div>';
+  s+='<div class="box"><div class="label">CHART</div><div class="tv">'+tvChart(m.symbol)+'</div></div>';
+  s+='</div></section>';
+  return s;
+}
+function render(){
+  var a='',i;
+  for(i=0;i<markets.length;i++){a+=makeMarket(markets[i]);}
+  document.getElementById('app').innerHTML=a;
+}
+function toggleStock(id){
+  var b=document.getElementById('body-'+id),a=document.getElementById('arr-'+id);
+  if(b.style.display==='block'){b.style.display='none';a.innerHTML='▸';}
+  else{b.style.display='block';a.innerHTML='▾';}
+}
+function calc(id){
+  var side=document.getElementById('side-'+id).value;
+  var e=parseFloat(document.getElementById('open-'+id).value);
+  var q=parseFloat(document.getElementById('qty-'+id).value);
+  var c=parseFloat(document.getElementById('cur-'+id).value);
+  var el=document.getElementById('sum-'+id);
+  if(isNaN(e)||isNaN(q)||isNaN(c)){el.innerHTML='Enter open, units and current price';return;}
+  var p=(side==='BUY'?(c-e):(e-c))*q;
+  el.innerHTML=side+' • '+(p>=0?'+':'')+p.toFixed(2);
+  el.style.color=p>=0?'#62d37d':'#ff6b6b';
+}
+render();
+</script>
+
+<script>
+function toggleIndicatorMenu(btn){
+  var m=btn.nextElementSibling;
+  if(m)m.style.display=(m.style.display==='none'||!m.style.display)?'block':'none';
+}
+function setIndicator(cb,type){
+  var panel=cb.closest('.indicator-panel');
+  var chart=panel && panel.nextElementSibling;
+  var host=chart && (chart.closest('[id^="chart-"]') || chart);
+  // The embedded TradingView widget is isolated from page JavaScript.
+  // Keep the control state visible without adding a separate price feed.
+  cb.setAttribute('data-enabled', cb.checked ? '1' : '0');
+  if(host) host.setAttribute('data-'+type, cb.checked ? '1' : '0');
+}
+</script>
+</body>
+</html>
