@@ -1,0 +1,222 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trading Dashboard — iPad</title>
+<style>
+body{margin:0;background:#111;color:#eee;font-family:Arial,sans-serif;font-size:14px}
+header{padding:12px;background:#1b1b1b;border-bottom:1px solid #333}
+h1{font-size:20px;margin:0 0 4px}.sub{color:#aaa;font-size:12px}
+.wrap{padding:8px}.stock{border:1px solid #444;border-radius:8px;margin:8px 0;overflow:hidden;background:#151515}
+.stock-toggle{width:100%;border:0;background:#202020;color:#fff;text-align:left;padding:14px;font-size:16px;font-weight:bold}
+.stock-body{display:none;padding:8px}.row{display:flex;gap:8px;align-items:flex-start}
+.left{width:42%}.right{width:58%}.box{border:1px solid #444;border-radius:6px;padding:8px;margin-bottom:7px;background:#181818}
+.label{font-size:11px;color:#aaa}.value{font-size:18px;margin-top:3px}
+.tv{background:#181818;border:1px solid #333;border-radius:6px;overflow:hidden;margin-bottom:7px}
+.tv iframe{width:100%;border:0;display:block}.small{font-size:11px;color:#999;line-height:1.35}
+.pos select,.pos input{display:block;width:100%;box-sizing:border-box;margin-top:7px;padding:10px;background:#111;color:#fff;border:1px solid #555;border-radius:5px;font-size:14px}
+.pos button,.feed button{margin-top:8px;padding:10px 14px;background:#303030;color:#fff;border:1px solid #666;border-radius:5px}
+.summary{padding:9px;border:1px solid #444;border-radius:6px;margin-bottom:7px;background:#101010;font-weight:bold}
+.status{padding:7px;border-radius:5px;background:#111;border:1px solid #444;margin-top:7px;font-size:11px}
+.green{color:#62d37d}.red{color:#ff6b6b}.yellow{color:#f0c766}
+#gate{position:fixed;inset:0;background:#111;z-index:9999;text-align:center;padding-top:100px}
+#gate input{padding:12px;font-size:18px;background:#222;color:#fff;border:1px solid #555;border-radius:5px}
+#gate button{padding:10px 25px;margin-top:10px;background:#333;color:#fff;border:1px solid #666;border-radius:5px}
+#settings{display:none;position:fixed;inset:0;background:rgba(0,0,0,.86);z-index:9998;padding:40px 15px}
+.settingsbox{max-width:500px;margin:auto;background:#191919;border:1px solid #555;border-radius:8px;padding:15px}
+.settingsbox input{width:100%;box-sizing:border-box;padding:11px;background:#111;color:#fff;border:1px solid #555;border-radius:5px}
+.settingsbox button{padding:10px 14px;margin:8px 5px 0 0;background:#333;color:#fff;border:1px solid #666;border-radius:5px}
+.topbutton{padding:8px 10px;background:#292929;color:#fff;border:1px solid #555;border-radius:5px}
+@media(max-width:700px){.row{display:block}.left,.right{width:100%}}
+</style>
+</head>
+<body>
+
+<div id="gate">
+<h2>Trading Dashboard</h2>
+<input id="pw" type="password" placeholder="Password">
+<br><button onclick="unlock()">Enter</button>
+<div id="bad" style="color:#f66;margin-top:10px"></div>
+</div>
+
+<div id="settings">
+<div class="settingsbox">
+<h2 style="margin-top:0">Automatic Current Prices</h2>
+<p class="small">Enter your Twelve Data API key once. The key is saved only in this iPad browser. The dashboard then tries to receive live prices automatically through WebSocket instead of asking you to type the current price.</p>
+<input id="apiKey" type="password" placeholder="Twelve Data API key">
+<br>
+<button onclick="saveKey()">Save & Connect</button>
+<button onclick="closeSettings()">Close</button>
+<div id="keyStatus" class="status">Not connected</div>
+</div>
+</div>
+
+<header>
+<h1>TRADING DASHBOARD</h1>
+<div class="sub">Trading 212 reference dashboard • old iPad Safari version</div>
+<div style="margin-top:8px">
+<button class="topbutton" onclick="openSettings()">Price-feed settings</button>
+<span id="globalStatus" class="status" style="display:inline-block;margin-left:5px">Feed not connected</span>
+</div>
+</header>
+
+<div class="wrap" id="app"></div>
+
+<script>
+var PASSWORD='70631';
+
+var markets=[
+ {id:'nq',name:'TECH100 / NASDAQ 100',tv:'OANDA:NAS100USD',feed:'NDX',dec:2},
+ {id:'oil',name:'CRUDE OIL / WTI',tv:'TVC:USOIL',feed:'WTI/USD',dec:2},
+ {id:'gold',name:'GOLD / XAUUSD',tv:'OANDA:XAUUSD',feed:'XAU/USD',dec:2},
+ {id:'silver',name:'SILVER / XAGUSD',tv:'OANDA:XAGUSD',feed:'XAG/USD',dec:3}
+];
+
+var prices={},ws=null;
+
+function unlock(){
+ if(document.getElementById('pw').value===PASSWORD){
+  document.getElementById('gate').style.display='none';
+ }else document.getElementById('bad').innerHTML='Wrong password';
+}
+document.getElementById('pw').onkeydown=function(e){
+ e=e||window.event;if(e.keyCode===13)unlock();
+};
+
+function openSettings(){
+ document.getElementById('settings').style.display='block';
+ document.getElementById('apiKey').value=localStorage.getItem('td_api_key')||'';
+}
+function closeSettings(){document.getElementById('settings').style.display='none'}
+function saveKey(){
+ var k=document.getElementById('apiKey').value.replace(/^\s+|\s+$/g,'');
+ if(!k)return;
+ localStorage.setItem('td_api_key',k);
+ closeSettings();
+ connectFeed();
+}
+function tvQuote(symbol){
+ var opt=encodeURIComponent('{"symbol":"'+symbol+'","width":"100%","colorTheme":"dark","isTransparent":false,"locale":"en"}');
+ return '<iframe height="126" scrolling="no" allowtransparency="true" frameborder="0" src="https://s.tradingview.com/embed-widget/single-quote/?locale=en#'+opt+'"></iframe>';
+}
+function tvChart(symbol){
+ var opt=encodeURIComponent('{"autosize":true,"symbol":"'+symbol+'","interval":"30","timezone":"Europe/London","theme":"dark","style":"1","locale":"en","enable_publishing":false,"hide_top_toolbar":true,"hide_legend":false,"save_image":false,"allow_symbol_change":false}');
+ return '<iframe height="360" scrolling="no" allowtransparency="true" frameborder="0" src="https://s.tradingview.com/embed-widget/advanced-chart/?locale=en#'+opt+'"></iframe>';
+}
+function fmt(m,n){
+ if(typeof n!=='number'||isNaN(n))return '--';
+ return n.toLocaleString('en-GB',{minimumFractionDigits:m.dec,maximumFractionDigits:m.dec});
+}
+function marketById(id){
+ var i;for(i=0;i<markets.length;i++)if(markets[i].id===id)return markets[i];return null;
+}
+function makeMarket(m){
+ var s='';
+ s+='<section class="stock">';
+ s+='<button class="stock-toggle" onclick="toggleStock(\''+m.id+'\')" type="button">'+m.name+' <span id="arr-'+m.id+'">▸</span></button>';
+ s+='<div class="stock-body" id="body-'+m.id+'">';
+ s+='<div class="row"><div class="left">';
+ s+='<div class="box"><div class="label">CURRENT PRICE</div><div id="cur-'+m.id+'" class="value">--</div><div id="feed-'+m.id+'" class="status">Waiting for automatic feed…</div></div>';
+ s+='<div class="box"><div class="label">TRADINGVIEW QUOTE</div><div class="tv">'+tvQuote(m.tv)+'</div></div>';
+ s+='<div class="box"><div class="label">RESISTANCE</div><div class="value">Use the recent chart high</div></div>';
+ s+='<div class="box"><div class="label">HOLD / SUPPORT</div><div class="value">Use the recent chart low</div></div>';
+ s+='<div class="small">The TradingView iframe can display the quote, but the page cannot safely read that iframe value. The automatic number above therefore comes from the optional WebSocket feed.</div>';
+ s+='</div><div class="right">';
+ s+='<div class="summary" id="sum-'+m.id+'">No position entered</div>';
+ s+='<div class="box pos"><b>MY POSITION ▾</b>';
+ s+='<select id="side-'+m.id+'"><option value="BUY">BUY</option><option value="SELL">SELL</option></select>';
+ s+='<input id="open-'+m.id+'" type="text" placeholder="Open price">';
+ s+='<input id="qty-'+m.id+'" type="text" placeholder="Shares / Units">';
+ s+='<input id="curInput-'+m.id+'" type="text" placeholder="Automatic current price" readonly>';
+ s+='<button onclick="calc(\''+m.id+'\')" type="button">Calculate P/L</button>';
+ s+='</div></div></div>';
+ s+='<div class="box"><div class="label">CHART</div><div class="tv">'+tvChart(m.tv)+'</div></div>';
+ s+='</div></section>';
+ return s;
+}
+function render(){
+ var a='',i;for(i=0;i<markets.length;i++)a+=makeMarket(markets[i]);
+ document.getElementById('app').innerHTML=a;
+}
+function toggleStock(id){
+ var b=document.getElementById('body-'+id),a=document.getElementById('arr-'+id);
+ if(b.style.display==='block'){b.style.display='none';a.innerHTML='▸';}
+ else{b.style.display='block';a.innerHTML='▾';}
+}
+function updatePrice(id,p){
+ var m=marketById(id);
+ prices[id]=p;
+ document.getElementById('cur-'+id).innerHTML=fmt(m,p);
+ document.getElementById('curInput-'+id).value=fmt(m,p);
+ document.getElementById('feed-'+id).innerHTML='LIVE • '+new Date().toLocaleTimeString('en-GB');
+ document.getElementById('feed-'+id).className='status green';
+ calc(id);
+}
+function calc(id){
+ var side=document.getElementById('side-'+id).value;
+ var e=parseFloat(document.getElementById('open-'+id).value);
+ var q=parseFloat(document.getElementById('qty-'+id).value);
+ var c=prices[id];
+ var el=document.getElementById('sum-'+id);
+ if(isNaN(e)||isNaN(q)||typeof c!=='number'){
+  el.innerHTML='Enter open price and units — current price will fill automatically';
+  el.style.color='#ddd';return;
+ }
+ var p=(side==='BUY'?(c-e):(e-c))*q;
+ el.innerHTML=side+' • '+(p>=0?'+':'')+p.toFixed(2);
+ el.style.color=p>=0?'#62d37d':'#ff6b6b';
+ localStorage.setItem('pos_'+id,JSON.stringify({side:side,open:e,qty:q}));
+}
+function loadPositions(){
+ var i,p;
+ for(i=0;i<markets.length;i++){
+  p=JSON.parse(localStorage.getItem('pos_'+markets[i].id)||'null');
+  if(p){
+   document.getElementById('side-'+markets[i].id).value=p.side||'BUY';
+   document.getElementById('open-'+markets[i].id).value=p.open||'';
+   document.getElementById('qty-'+markets[i].id).value=p.qty||'';
+  }
+ }
+}
+function setGlobal(t,c){
+ var e=document.getElementById('globalStatus');e.innerHTML=t;e.className='status '+(c||'');
+}
+function connectFeed(){
+ var key=localStorage.getItem('td_api_key');
+ if(!key){setGlobal('Feed not connected','yellow');return;}
+ try{if(ws)ws.close();}catch(e){}
+ setGlobal('Feed connecting…','yellow');
+ ws=new WebSocket('wss://ws.twelvedata.com/v1/quotes/price?apikey='+encodeURIComponent(key));
+ ws.onopen=function(){
+  setGlobal('Feed connected','green');
+  var symbols='',i;
+  for(i=0;i<markets.length;i++){if(i)symbols+=',';symbols+=markets[i].feed;}
+  ws.send(JSON.stringify({action:'subscribe',params:{symbols:symbols}}));
+ };
+ ws.onmessage=function(ev){
+  try{
+   var j=JSON.parse(ev.data),i;
+   if(j.event==='price'){
+    for(i=0;i<markets.length;i++){
+     if(markets[i].feed===j.symbol){
+      var p=parseFloat(j.price);
+      if(!isNaN(p))updatePrice(markets[i].id,p);
+     }
+    }
+   }
+   if(j.event==='subscribe-status'){
+    document.getElementById('keyStatus').innerHTML='Feed response received. Check each market status.';
+   }
+  }catch(e){}
+ };
+ ws.onerror=function(){setGlobal('Feed error','red')};
+ ws.onclose=function(){setGlobal('Feed disconnected','red')};
+}
+render();
+loadPositions();
+if(localStorage.getItem('td_api_key'))connectFeed();
+else setGlobal('Feed not connected — open Price-feed settings','yellow');
+</script>
+</body>
+</html>
