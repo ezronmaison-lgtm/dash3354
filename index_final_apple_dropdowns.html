@@ -1,0 +1,346 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trading Dashboard</title>
+<style>
+body{margin:0;background:#111;color:#eee;font-family:Arial,sans-serif;font-size:14px}
+header{padding:12px;background:#1b1b1b;border-bottom:1px solid #333}
+h1{font-size:20px;margin:0 0 4px}
+.sub{color:#aaa;font-size:12px}
+.wrap{padding:8px}
+.stock{border:1px solid #444;border-radius:8px;margin:8px 0;overflow:hidden;background:#151515}
+.stock-toggle{width:100%;border:0;background:#202020;color:#fff;text-align:left;padding:14px;font-size:16px;font-weight:bold}
+.stock-body{display:none;padding:8px}
+.row{display:flex;gap:8px;align-items:flex-start}
+.left{width:42%}.right{width:58%}
+.box{border:1px solid #444;border-radius:6px;padding:8px;margin-bottom:7px;background:#181818}
+.label{font-size:11px;color:#aaa}.value{font-size:18px;margin-top:3px}
+.tv{background:#181818;border:1px solid #333;border-radius:6px;overflow:hidden;margin-bottom:8px}
+.tv iframe{width:100%;border:0;display:block}
+.pos input,.pos select{box-sizing:border-box;width:100%;padding:9px;margin:4px 0;background:#222;color:#fff;border:1px solid #555;border-radius:4px;font-size:14px}
+.pos button{padding:9px 12px;background:#333;color:#fff;border:1px solid #666;border-radius:4px}
+.small{font-size:11px;color:#999;line-height:1.4}
+.summary{padding:10px;border:1px solid #444;border-radius:6px;text-align:center;margin-bottom:8px}
+.indicator-panel{position:relative;z-index:10;margin-bottom:8px}
+.indicator-button{background:#202020;color:#fff;border:1px solid #555;border-radius:5px;padding:8px 10px;font-weight:bold;font-size:13px}
+.indicator-menu{display:none;background:#101010;border:1px solid #555;border-radius:8px;padding:8px;margin-top:4px;width:245px;box-sizing:border-box}
+.indicator-row{display:flex;align-items:center;justify-content:space-between;padding:8px 2px;color:#eee;font-size:13px}
+.indicator-name{padding-right:10px}
+.apple-switch{position:relative;display:inline-block;width:44px;height:26px;flex:0 0 44px}
+.apple-switch input{opacity:0;width:0;height:0;position:absolute}
+.apple-slider{position:absolute;cursor:pointer;inset:0;background:#555;border-radius:26px;border:1px solid #666;box-sizing:border-box}
+.apple-slider:before{content:"";position:absolute;width:20px;height:20px;left:2px;top:2px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.45)}
+.apple-switch input:checked + .apple-slider{background:#34c759;border-color:#34c759}
+.apple-switch input:checked + .apple-slider:before{transform:translateX(18px)}
+.indicator-note{font-size:10px;color:#888;margin-top:6px;line-height:1.35}
+@media(max-width:600px){.row{display:block}.left,.right{width:100%}}
+
+.greeting-card{margin:0 0 14px 0;padding:14px 15px;background:#151515;border:1px solid #303030;border-radius:14px}
+.greeting-title{font-size:20px;font-weight:700;color:#fff}
+.greeting-sub{font-size:12px;color:#888;margin-top:2px}
+.greeting-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:13px}
+.greeting-stat{padding:11px 12px;background:#0f0f0f;border:1px solid #292929;border-radius:11px}
+.greeting-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.35px}
+.greeting-value{font-size:21px;font-weight:700;color:#fff;margin-top:3px}
+.greeting-value.positive{color:#34c759}.greeting-value.negative{color:#ff453a}
+.greeting-made-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;border:0;background:transparent;color:#fff;padding:0;text-align:left}
+.greeting-chevron{font-size:16px;color:#888}
+.manual-panel{display:none;margin-top:9px;padding-top:10px;border-top:1px solid #292929}
+.manual-panel.open{display:block}
+.manual-row{display:flex;gap:7px;align-items:center}
+.manual-input{flex:1;min-width:0;background:#0b0b0b;border:1px solid #3a3a3a;border-radius:8px;color:#fff;padding:9px;font-size:14px}
+.manual-btn{background:#202020;border:1px solid #444;color:#fff;border-radius:8px;padding:9px 11px;font-weight:600}
+.manual-reset{margin-top:7px;background:transparent;border:0;color:#888;font-size:11px;padding:3px}
+.position-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;background:#171717;border:1px solid #3a3a3a;color:#fff;border-radius:8px;padding:8px 10px;font-weight:700;font-size:12px}
+.position-toggle .chev{color:#999;font-size:15px}
+.position-body{display:block}
+.position-body.hidden{display:none}
+
+.apple-dropdown{display:flex;align-items:center;justify-content:space-between;width:100%;box-sizing:border-box;background:#171717;border:1px solid #303030;color:#fff;border-radius:10px;padding:8px 10px;font-weight:700;font-size:12px;cursor:pointer}
+.apple-dropdown .drop-switch{position:relative;width:40px;height:24px;border-radius:24px;background:#555;border:1px solid #666;box-sizing:border-box;flex:0 0 40px}
+.apple-dropdown.open .drop-switch{background:#34c759;border-color:#34c759}
+.apple-dropdown .drop-switch:before{content:"";position:absolute;width:18px;height:18px;left:2px;top:2px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.45);transition:transform .16s ease}
+.apple-dropdown.open .drop-switch:before{transform:translateX(16px)}
+.market-header{cursor:pointer}
+</style>
+</head>
+<body>
+<div class="greeting-card">
+  <div class="greeting-title">Hello, Ezron 👋</div>
+  <div class="greeting-sub">Your trading today</div>
+  <div class="greeting-grid">
+    <div class="greeting-stat">
+      <div class="greeting-label">Current P/L</div>
+      <div id="topCurrentPnl" class="greeting-value">£0.00</div>
+    </div>
+    <div class="greeting-stat">
+      <button class="greeting-made-toggle" type="button" onclick="toggleManualTotal()">
+        <span>
+          <div class="greeting-label">Made today</div>
+          <div id="topMadeToday" class="greeting-value">£0.00</div>
+        </span>
+        <span id="manualChevron" class="greeting-chevron">⌄</span>
+      </button>
+      <div id="manualPanel" class="manual-panel">
+        <div class="manual-row">
+          <input id="manualAmount" class="manual-input" type="number" step="0.01" inputmode="decimal" placeholder="Amount">
+          <button class="manual-btn" type="button" onclick="addManualTotal()">+ Add</button>
+          <button class="manual-btn" type="button" onclick="subtractManualTotal()">−</button>
+        </div>
+        <button class="manual-reset" type="button" onclick="resetManualTotal()">Reset today's total</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="gate" style="position:fixed;z-index:99;inset:0;background:#111;color:#fff;text-align:center;padding-top:100px">
+<h2>Trading Dashboard</h2>
+<input id="pw" type="password" style="padding:12px;font-size:18px" placeholder="Password">
+<br><button onclick="unlock()" style="margin-top:10px;padding:10px 25px">Enter</button>
+<div id="bad" style="color:#f66;margin-top:10px"></div>
+</div>
+
+<header>
+<h1>TRADING DASHBOARD</h1>
+<div class="sub">Trading 212 reference dashboard • designed for old iPad Safari</div>
+</header>
+<div class="wrap" id="app"></div>
+
+
+
+
+<script>
+(function(){
+  var oldToggleStock = window.toggleStock;
+  if(typeof oldToggleStock === 'function'){
+    window.toggleStock = function(id){
+      oldToggleStock(id);
+      setTimeout(function(){
+        var h=document.getElementById(id);
+        if(h){
+          var header=h.previousElementSibling;
+          if(header){
+            var sw=header.querySelector('.drop-switch');
+            if(sw) header.classList.toggle('open', h.style.display!=='none');
+          }
+        }
+      },20);
+    };
+  }
+})();
+</script>
+<script>
+function togglePosition(btn){
+  var body=btn.nextElementSibling, chev=btn.querySelector('.chev');
+  if(!body) return;
+  body.classList.toggle('hidden');
+  btn.classList.toggle('open', !body.classList.contains('hidden'));
+}
+function refreshTopPnl(){
+  var total=0;
+  if(window.stocks && Array.isArray(window.stocks)){
+    window.stocks.forEach(function(s){
+      var q=Number(s.qty||s.units||0), e=Number(s.open||s.entry||0), c=Number(s.current||s.price||0);
+      if(q&&e&&c) total += (s.side==='SELL'||s.direction==='SELL') ? (e-c)*q : (c-e)*q;
+    });
+  }
+  var el=document.getElementById('topCurrentPnl');
+  if(el){
+    el.textContent=(total<0?'−':'')+'£'+Math.abs(total).toFixed(2);
+    el.className='greeting-value '+(total>0?'positive':total<0?'negative':'');
+  }
+}
+</script>
+<script>
+(function(){
+  var key='dash_manual_today';
+  function day(){ return new Date().toISOString().slice(0,10); }
+  function get(){
+    try{
+      var raw=localStorage.getItem(key);
+      if(!raw) return {date:day(),value:0};
+      var x=JSON.parse(raw);
+      if(x.date!==day()) return {date:day(),value:0};
+      return {date:day(),value:Number(x.value)||0};
+    }catch(e){ return {date:day(),value:0}; }
+  }
+  function save(v){ try{localStorage.setItem(key,JSON.stringify({date:day(),value:v}));}catch(e){} updateManualTotal(); }
+  window.updateManualTotal=function(){
+    var x=get(), el=document.getElementById('topMadeToday');
+    if(el) el.textContent=(x.value<0?'−':'')+'£'+Math.abs(x.value).toFixed(2);
+  };
+  window.toggleManualTotal=function(){
+    var p=document.getElementById('manualPanel'), c=document.getElementById('manualChevron');
+    if(!p) return;
+    var open=p.classList.toggle('open');
+    if(c) c.textContent=open?'⌃':'⌄';
+  };
+  window.addManualTotal=function(){
+    var i=document.getElementById('manualAmount'), v=parseFloat(i&&i.value);
+    if(!Number.isFinite(v)) return;
+    save(get().value+v); if(i) i.value='';
+  };
+  window.subtractManualTotal=function(){
+    var i=document.getElementById('manualAmount'), v=parseFloat(i&&i.value);
+    if(!Number.isFinite(v)) return;
+    save(get().value-v); if(i) i.value='';
+  };
+  window.resetManualTotal=function(){ save(0); };
+  updateManualTotal();
+})();
+</script>
+<script>
+var PASSWORD='70631';
+
+function unlock(){
+  if(document.getElementById('pw').value===PASSWORD){
+    document.getElementById('gate').style.display='none';
+  }else{
+    document.getElementById('bad').innerHTML='Wrong password';
+  }
+}
+
+document.getElementById('pw').onkeydown=function(e){
+  e=e||window.event;
+  if(e.keyCode===13){unlock();}
+};
+
+var markets=[
+ {id:'nq',name:'TECH100 / NASDAQ 100',symbol:'OANDA:NAS100USD'},
+ {id:'oil',name:'CRUDE OIL / WTI',symbol:'TVC:USOIL'},
+ {id:'gold',name:'GOLD / XAUUSD',symbol:'OANDA:XAUUSD'},
+ {id:'silver',name:'SILVER / XAGUSD',symbol:'OANDA:XAGUSD'}
+];
+
+/* Each market keeps its own indicator state. */
+var indicatorState={
+ nq:{fib:true,macd:false,trend:false},
+ oil:{fib:true,macd:false,trend:false},
+ gold:{fib:true,macd:false,trend:false},
+ silver:{fib:true,macd:false,trend:false}
+};
+
+function tvQuote(symbol){
+  var opt=encodeURIComponent('{"symbol":"'+symbol+'","width":"100%","colorTheme":"dark","isTransparent":false,"locale":"en"}');
+  return '<iframe height="126" scrolling="no" allowtransparency="true" frameborder="0" src="https://s.tradingview.com/embed-widget/single-quote/?locale=en#'+opt+'"></iframe>';
+}
+
+function tvChart(symbol,id){
+  var st=indicatorState[id];
+  var studies=[];
+  if(st.fib){studies.push('Auto Fib Retracement');studies.push('Auto Fib Extension');}
+  if(st.macd){studies.push('MACD');}
+
+  var config={
+    autosize:true,
+    symbol:symbol,
+    interval:'30',
+    timezone:'Etc/UTC',
+    theme:'dark',
+    style:'1',
+    locale:'en',
+    enable_publishing:false,
+    hide_top_toolbar:false,
+    hide_legend:false,
+    save_image:false,
+    allow_symbol_change:false,
+    hide_side_toolbar:!st.trend,
+    studies:studies
+  };
+  var opt=encodeURIComponent(JSON.stringify(config));
+  return '<iframe id="frame-'+id+'" height="360" scrolling="no" allowtransparency="true" frameborder="0" src="https://s.tradingview.com/embed-widget/advanced-chart/?locale=en#'+opt+'"></iframe>';
+}
+
+function indicatorMenu(id){
+  var st=indicatorState[id];
+  var s='';
+  s+='</div><div class="indicator-panel">';
+  s+='<button class="indicator-button" type="button" onclick="toggleIndicatorMenu(\''+id+'\')">INDICATORS ▾</button>';
+  s+='<div class="indicator-menu" id="menu-'+id+'">';
+  s+='<div class="indicator-row"><span class="indicator-name">Auto Fib</span><label class="apple-switch"><input type="checkbox" '+(st.fib?'checked ':'')+'onclick="setIndicator(\''+id+'\',\'fib\',this.checked)"><span class="apple-slider"></span></label></div>';
+  s+='<div class="indicator-row"><span class="indicator-name">MACD</span><label class="apple-switch"><input type="checkbox" '+(st.macd?'checked ':'')+'onclick="setIndicator(\''+id+'\',\'macd\',this.checked)"><span class="apple-slider"></span></label></div>';
+  s+='<div class="indicator-row"><span class="indicator-name">Trendline tools</span><label class="apple-switch"><input type="checkbox" '+(st.trend?'checked ':'')+'onclick="setIndicator(\''+id+'\',\'trend\',this.checked)"><span class="apple-slider"></span></label></div>';
+  s+='<div class="indicator-note">Green = ON. Changes reload the TradingView chart.</div>';
+  s+='</div></div>';
+  return s;
+}
+
+function makeMarket(m){
+  var s='';
+  s+='<section class="stock">';
+  s+='<button class="stock-toggle" onclick="toggleStock(\''+m.id+'\')" type="button">'+m.name+' <span id="arr-'+m.id+'">▸</span></button>';
+  s+='<div class="stock-body" id="body-'+m.id+'">';
+  s+='<div class="row">';
+  s+='<div class="left">';
+  s+='<div class="box"><div class="label">CURRENT — TradingView quote</div><div class="tv">'+tvQuote(m.symbol)+'</div></div>';
+  s+='<div class="box"><div class="label">RESISTANCE</div><div class="value">Use the recent chart high</div></div>';
+  s+='<div class="box"><div class="label">HOLD / SUPPORT</div><div class="value">Use the recent chart low</div></div>';
+  s+='<div class="box"><div class="label">FIB GUIDE</div><div class="small">DOWNTREND: 1.000 → 0.618 → 0.500 → 0.000 → -1.000</div><div class="small" style="margin-top:5px">UPTREND: -1.000 → 0.000 → 0.500 → 0.618 → 1.000</div></div>';
+  s+='</div>';
+  s+='<div class="right">';
+  s+='<div class="summary" id="sum-'+m.id+'">No position entered</div>';
+  s+='<div class="box pos"><b>MY POSITION ▾</b>';
+  s+='<select id="side-'+m.id+'"><option value="BUY">BUY</option><option value="SELL">SELL</option></select>';
+  s+='<input id="open-'+m.id+'" type="text" placeholder="Open price">';
+  s+='<input id="qty-'+m.id+'" type="text" placeholder="Shares / Units">';
+  s+='<input id="cur-'+m.id+'" type="text" placeholder="Current price">';
+  s+='<button onclick="calc(\''+m.id+'\')" type="button">Calculate P/L</button>';
+  s+='</div></div></div>';
+  s+=indicatorMenu(m.id);
+  s+='<div class="box"><div class="label">CHART</div><div class="tv" id="chart-'+m.id+'">'+tvChart(m.symbol,m.id)+'</div></div>';
+  s+='</div></section>';
+  return s;
+}
+
+function render(){
+  var a='',i;
+  for(i=0;i<markets.length;i++){a+=makeMarket(markets[i]);}
+  document.getElementById('app').innerHTML=a;
+}
+
+function toggleStock(id){
+  var b=document.getElementById('body-'+id),a=document.getElementById('arr-'+id);
+  if(b.style.display==='block'){b.style.display='none';a.innerHTML='▸';}
+  else{b.style.display='block';a.innerHTML='▾';}
+}
+
+function toggleIndicatorMenu(id){
+  var m=document.getElementById('menu-'+id);
+  if(m.style.display==='block'){m.style.display='none';}
+  else{m.style.display='block';}
+}
+
+function setIndicator(id,type,enabled){
+  indicatorState[id][type]=enabled;
+  var market=null,i;
+  for(i=0;i<markets.length;i++){
+    if(markets[i].id===id){market=markets[i];break;}
+  }
+  if(!market){return;}
+
+  var holder=document.getElementById('chart-'+id);
+  if(holder){holder.innerHTML=tvChart(market.symbol,id);}
+}
+
+function calc(id){
+  var side=document.getElementById('side-'+id).value;
+  var e=parseFloat(document.getElementById('open-'+id).value);
+  var q=parseFloat(document.getElementById('qty-'+id).value);
+  var c=parseFloat(document.getElementById('cur-'+id).value);
+  var el=document.getElementById('sum-'+id);
+  if(isNaN(e)||isNaN(q)||isNaN(c)){
+    el.innerHTML='Enter open, units and current price';
+    el.style.color='#fff';
+    return;
+  }
+  var p=(side==='BUY'?(c-e):(e-c))*q;
+  el.innerHTML=side+' • '+(p>=0?'+':'')+p.toFixed(2);
+  el.style.color=p>=0?'#62d37d':'#ff6b6b';
+}
+
+render();
+</script>
+</body>
+</html>
